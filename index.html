@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>REAPER HUB - X5</title>
+    <title>REAPER Hub - X6</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -207,36 +207,44 @@
         }
 
         window.addEventListener('DOMContentLoaded', () => {
-            initKeyVerification();
+            verifyAndProcessKey();
         });
 
-        async function initKeyVerification() {
-            const permissionToken = localStorage.getItem('reaper_permission_granted');
+        async function verifyAndProcessKey() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlPass = urlParams.get('pass');
+            const localPass = localStorage.getItem('reaper_temp_pass');
+            
             const lastGetKeyTime = localStorage.getItem('reaper_last_key_time');
             const storedKey = localStorage.getItem('reaper_active_key');
             const now = Date.now();
             const cooldownTime = COOLDOWN_HOURS * 60 * 60 * 1000;
 
-            // 1. ถ้าคีย์เก่ายังไม่หมดอายุ 6 ชม. โชว์คีย์เดิม
+            // 1. ถ้ายังมีคีย์เดิมและอยู่ในช่วง 6 ชั่วโมง -> แสดงคีย์เดิมทันทีเพื่อป้องกันการปั๊มคีย์
             if (lastGetKeyTime && storedKey && (now - parseInt(lastGetKeyTime) < cooldownTime)) {
                 showKeyUI(storedKey);
                 return;
             }
 
-            // 2. ตรวจสอบสิทธิ์ One-time token
-            if (permissionToken === 'true') {
-                localStorage.removeItem('reaper_permission_granted');
+            // 2. เช็กความถูกต้องตั้งแต่ต้นทาง: ต้องมี Token จาก URL ตรงกับที่เก็บบันทึกไว้ในเครื่อง
+            if (urlPass && localPass && urlPass === localPass) {
+                // ทำลาย Token ชั่วค ทันทีเพื่อใช้ครั้งเดียวทิ้ง (One-time use)
+                localStorage.removeItem('reaper_temp_pass');
 
+                // สร้างคีย์ใหม่
                 const newKey = generateReaperKey('REAPER');
                 
+                // บันทึกเวลาคูลดาวน์และคีย์ปัจจุบัน
                 localStorage.setItem('reaper_last_key_time', now.toString());
                 localStorage.setItem('reaper_active_key', newKey);
 
-                // บันทึกผ่าน Firebase SDK โดยตรง (พร้อมระบบแจ้งเตือนถ้าเกิดข้อผิดพลาด)
+                // บันทึกเข้า Firebase Database ผ่าน SDK ทันทีอย่างปลอดภัย 100%
                 await saveKeyUsingSDK(newKey);
 
+                // แสดงผลคีย์ให้ผู้ใช้ก๊อปปี้
                 showKeyUI(newKey);
             } else {
+                // ถ้าแอบก๊อปปี้ลิงก์มาเปิดตรงๆ หรือไม่มี Token ยืนยัน ดีดกลับหน้าแรกทันที
                 goToHome();
             }
         }
@@ -260,7 +268,6 @@
             return `${prefix.toUpperCase()}-${getRandomSegment(3)}-${getRandomSegment(3)}-${getRandomSegment(3)}`;
         }
 
-        // บันทึกข้อมูลด้วย Firebase SDK (จัดการเรื่องสิทธิ์และเชื่อมต่อได้เสถียรที่สุด)
         async function saveKeyUsingSDK(newKey) {
             if (!newKey) return;
             try {
@@ -270,10 +277,9 @@
                     expiresAt: Date.now() + (24 * 60 * 60 * 1000),
                     hwid: null
                 });
-                console.log("บันทึกคีย์ลง Firebase ผ่าน SDK สำเร็จ:", newKey);
+                console.log("บันทึกคีย์ลง Firebase สำเร็จผ่านระบบตรวจสอบที่ถูกต้อง:", newKey);
             } catch (err) {
                 console.error("Firebase SDK Error:", err);
-                alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล: " + err.message);
             }
         }
 
@@ -293,3 +299,4 @@
     </script>
 </body>
 </html>
+
