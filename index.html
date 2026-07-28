@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>REAPER Hub - Key System x</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        reaper: {
+                            red: '#ef4444',
+                            darkred: '#991b1b',
+                            glow: '#f87171'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #05070d;
+            color: #f8fafc;
+            overflow-x: hidden;
+        }
+        
+        .glass-card-inner {
+            background: rgba(10, 15, 26, 0.95);
+            backdrop-filter: blur(20px);
+        }
+
+        .animated-border-wrapper {
+            position: relative;
+            padding: 2.5px;
+            border-radius: 1.75rem;
+            overflow: hidden;
+            box-shadow: 0 0 40px rgba(239, 68, 68, 0.25);
+        }
+
+        .animated-border-wrapper::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: conic-gradient(
+                from 0deg,
+                transparent 0deg,
+                transparent 210deg,
+                #7f1d1d 260deg,
+                #ef4444 310deg,
+                #fca5a5 360deg
+            );
+            animation: spinBorder 3.5s linear infinite;
+            will-change: transform;
+        }
+
+        @keyframes spinBorder {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .glow-pulse {
+            animation: pulseGlow 4s ease-in-out infinite alternate;
+        }
+
+        @keyframes pulseGlow {
+            0% { opacity: 0.25; transform: scale(0.98); }
+            100% { opacity: 0.65; transform: scale(1.03); }
+        }
+
+        @keyframes auroraMove1 {
+            0% { transform: translate3d(0, 0, 0) scale(1); }
+            50% { transform: translate3d(60px, 80px, 0) scale(1.25); }
+            100% { transform: translate3d(-40px, 40px, 0) scale(0.95); }
+        }
+
+        @keyframes auroraMove2 {
+            0% { transform: translate3d(0, 0, 0) scale(1.1); }
+            50% { transform: translate3d(-70px, -50px, 0) scale(0.85); }
+            100% { transform: translate3d(50px, -80px, 0) scale(1.2); }
+        }
+
+        .animate-aurora-active-1 {
+            animation: auroraMove1 7s ease-in-out infinite alternate;
+            will-change: transform;
+        }
+
+        .animate-aurora-active-2 {
+            animation: auroraMove2 9s ease-in-out infinite alternate;
+            will-change: transform;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between relative selection:bg-reaper-red selection:text-white">
+
+    <!-- Active Red Aurora Background Orbs -->
+    <div class="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        <div class="absolute -top-24 left-1/2 -translate-x-1/2 w-[550px] h-[550px] bg-red-600/35 rounded-full blur-[100px] animate-aurora-active-1"></div>
+        <div class="absolute top-1/3 -left-28 w-[450px] h-[450px] bg-reaper-darkred/50 rounded-full blur-[90px] animate-aurora-active-2"></div>
+        <div class="absolute -bottom-28 -right-16 w-[500px] h-[500px] bg-rose-600/30 rounded-full blur-[110px] animate-aurora-active-1"></div>
+    </div>
+
+    <!-- Main Container -->
+    <main class="max-w-[400px] mx-auto px-4 py-8 w-full flex-grow flex items-center justify-center relative z-10">
+
+        <!-- Animated Border Outer Box -->
+        <div class="animated-border-wrapper w-full">
+
+            <!-- Main Inner Card -->
+            <div class="glass-card-inner rounded-[1.6rem] p-6 sm:p-7 w-full h-full min-h-[480px] flex flex-col justify-between relative z-10 overflow-hidden">
+                
+                <!-- Inner Glow Decor -->
+                <div class="absolute -right-16 -top-16 w-36 h-36 bg-reaper-red/20 rounded-full blur-2xl pointer-events-none glow-pulse"></div>
+
+                <!-- Header Block: Logo & Title -->
+                <div class="flex flex-col items-center justify-center text-center pt-1 border-b border-slate-800/80 pb-5 shrink-0">
+                    <a href="#" class="flex flex-col items-center gap-2 group">
+                        <div id="logo-container" class="w-14 h-14 rounded-2xl border border-reaper-red/50 p-1 bg-gradient-to-tr from-reaper-darkred via-reaper-red to-orange500 shadow-lg shadow-reaper-red/40 group-hover:scale-105 transition-transform overflow-hidden flex items-center justify-center">
+                            <img id="logo-img" src="https://i.postimg.cc/RCdqBSxf/IMG-0744.jpg" alt="Reaper Logo" class="w-full h-full object-cover rounded-xl" onerror="handleImageError()">
+                        </div>
+                        <div class="mt-1">
+                            <span class="text-2xl font-black bg-gradient-to-r from-white via-slate-200 to-reaper-red bg-clip-text text-transparent block tracking-wider leading-none">REAPER</span>
+                            <span class="text-[9px] text-reaper-glow block mt-1.5 font-bold tracking-[0.2em] uppercase">KEY GENERATED</span>
+                        </div>
+                    </a>
+                </div>
+
+                <!-- STEP 3 GENERATING & DISPLAY AREA -->
+                <div class="flex-grow flex flex-col justify-center my-auto py-4">
+                    
+                    <!-- 3-Second Loader -->
+                    <div id="generating-loader" class="flex flex-col items-center justify-center py-6 space-y-3">
+                        <div class="w-10 h-10 border-3 border-slate-800 border-t-reaper-red rounded-full animate-spin"></div>
+                        <div class="text-xs font-semibold text-slate-300 animate-pulse">Generating your REAPER Key...</div>
+                    </div>
+
+                    <!-- Key Box -->
+                    <div id="key-display-box" class="hidden bg-slate-900/90 border border-dashed border-reaper-red/50 p-4 rounded-2xl text-center space-y-3">
+                        <span class="text-[10px] text-slate-400 uppercase tracking-widest block font-medium">Your REAPER Key</span>
+                        <div id="generated-key" class="text-base sm:text-lg font-mono font-bold text-reaper-glow tracking-wider break-all select-all py-0.5">
+                            REAPER-XXX-XXX-XXX
+                        </div>
+                        <button id="copy-btn" onclick="copyGeneratedKey()" class="w-full py-2.5 rounded-xl bg-reaper-red hover:bg-red-600 text-white text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-all shadow-md shadow-reaper-red/20 active:scale-95 cursor-pointer">
+                            <i class="fa-solid fa-copy"></i> Copy Key
+                        </button>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="py-4 text-center text-[10px] text-slate-500 relative z-10">
+        <p>© 2026 REAPER Key System. REAPER HUB BETTER.</p>
+    </footer>
+
+    <!-- JavaScript Logic -->
+    <script>
+        const FIREBASE_DB_URL = "https://keysystem-reaper-default-rtdb.asia-southeast1.firebasedatabase.app"; 
+        const COOLDOWN_HOURS = 6; 
+
+        function handleImageError() {
+            const logoContainer = document.getElementById('logo-container');
+            logoContainer.innerHTML = '<i class="fa-solid fa-skull text-white text-2xl"></i>';
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            verifyAndGenerateKey();
+        });
+
+        function verifyAndGenerateKey() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const tokenFromUrl = urlParams.get('token');
+            const lastGetKeyTime = localStorage.getItem('reaper_last_key_time');
+            const now = Date.now();
+            const cooldownTime = COOLDOWN_HOURS * 60 * 60 * 1000;
+
+            // 1. ถ้าไม่มี Token หรือแอบก๊อปปี้ลิงก์ key.html มาแปะเปิดตรงๆ -> เด้งกลับ index.html ทันที
+            if (!tokenFromUrl || !tokenFromUrl.startsWith('REAPER_PASS_')) {
+                window.location.href = "index.html";
+                return;
+            }
+
+            // 2. ถ้าติดคูลดาวน์อยู่แล้วแอบเปิดใหม่ -> เด้งกลับ index.html ทันที
+            if (lastGetKeyTime && (now - parseInt(lastGetKeyTime) < cooldownTime)) {
+                window.location.href = "index.html";
+                return;
+            }
+
+            // ตั้งค่าเวลาติดคูลดาวน์ 6 ชั่วโมง
+            localStorage.setItem('reaper_last_key_time', now.toString());
+
+            setTimeout(async () => {
+                const newKey = generateReaperKey('REAPER');
+                await saveKeyToFirebase(newKey);
+
+                document.getElementById('generating-loader').classList.add('hidden');
+                document.getElementById('key-display-box').classList.remove('hidden');
+                document.getElementById('generated-key').innerText = newKey;
+                
+                // ล้าง Token จาก URL ทิ้งเพื่อป้องกันการเอา URL นี้ไปแชร์ต่อ
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }, 3000);
+        }
+
+        function generateReaperKey(prefix = 'REAPER') {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            const getRandomSegment = (length = 3) => {
+                let result = '';
+                for (let i = 0; i < length; i++) {
+                    result += chars.charAt(Math.floor(Math.random() * chars.length));
+                }
+                return result;
+            };
+
+            return `${prefix.toUpperCase()}-${getRandomSegment(3)}-${getRandomSegment(3)}-${getRandomSegment(3)}`;
+        }
+
+        async function saveKeyToFirebase(newKey) {
+            const expiresAt = Date.now() + (24 * 60 * 60 * 1000); 
+            const cleanUrl = FIREBASE_DB_URL.replace(/\/$/, "");
+
+            try {
+                await fetch(`${cleanUrl}/keys/${newKey}.json`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        key: newKey,
+                        createdAt: Date.now(),
+                        expiresAt: expiresAt,
+                        hwid: null 
+                    })
+                });
+                console.log("บันทึกคีย์ลง Firebase สำเร็จ!");
+            } catch (err) {
+                console.error("เกิดข้อผิดพลาดในการบันทึกคีย์:", err);
+            }
+        }
+
+        function copyGeneratedKey() {
+            const keyText = document.getElementById('generated-key').innerText;
+            const tempInput = document.createElement("input");
+            tempInput.value = keyText;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand("copy");
+            document.body.removeChild(tempInput);
+
+            const copyBtn = document.getElementById('copy-btn');
+            copyBtn.className = "w-full py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-all shadow-md shadow-emerald-600/20 cursor-pointer";
+            copyBtn.innerHTML = '<i class="fa-solid fa-check"></i> Key Copied!';
+        }
+    </script>
+</body>
+</html>
+
