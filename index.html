@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>REAPER Hub - Final Key</title>
+    <title>REAPER Hub - Success X</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -184,7 +184,6 @@
             logoContainer.innerHTML = '<i class="fa-solid fa-skull text-white text-2xl"></i>';
         }
 
-        // ฟังก์ชันย้ายหน้ากลับ index.html ป้องกันปัญหา Clean URLs
         function goToHome(e) {
             if (e) e.preventDefault();
             const currentUrl = window.location.href;
@@ -198,22 +197,6 @@
         window.addEventListener('DOMContentLoaded', () => {
             verifyAndGenerateKey();
         });
-
-        async function processNewKeyGeneration() {
-            const newKey = generateReaperKey('REAPER');
-            const now = Date.now();
-            
-            // บันทึกเวลาลงเครื่องให้ติดคูลดาวน์ 6 ชม. ทันที
-            localStorage.setItem('reaper_last_key_time', now.toString());
-            localStorage.setItem('reaper_active_key', newKey);
-
-            // เซฟคีย์ลง Firebase Database
-            await saveKeyToFirebase(newKey);
-
-            setTimeout(() => {
-                showKeyUI(newKey);
-            }, 2500);
-        }
 
         async function verifyAndGenerateKey() {
             const questDoneToken = sessionStorage.getItem('reaper_quest_done');
@@ -229,16 +212,25 @@
                 return;
             }
 
-            // 2. ตรวจสอบสิทธิ์: ต้องมาจาก Linkvertise หรือ มีตั๋วเควสชั่วคราวใน sessionStorage
+            // 2. ตรวจสอบสิทธิ์
             const isFromLinkvertise = referrer.includes('linkvertise') || referrer.includes('link-target');
             const hasValidSession = questDoneToken === 'true';
 
             if (isFromLinkvertise || hasValidSession) {
-                // ล้างตั๋วชั่วคราวทิ้ง
                 sessionStorage.removeItem('reaper_quest_done');
-                await processNewKeyGeneration();
+
+                const newKey = generateReaperKey('REAPER');
+                
+                localStorage.setItem('reaper_last_key_time', now.toString());
+                localStorage.setItem('reaper_active_key', newKey);
+
+                // ส่งข้อมูลเข้า Firebase Database อย่างถูกต้อง
+                await saveKeyToFirebase(newKey);
+
+                setTimeout(() => {
+                    showKeyUI(newKey);
+                }, 2500);
             } else {
-                // 3. ถ้าแอบเข้าตรงๆ ให้พาไป index.html โดยตรง
                 goToHome();
             }
         }
@@ -267,7 +259,7 @@
             const cleanUrl = FIREBASE_DB_URL.replace(/\/$/, "");
 
             try {
-                await fetch(`${cleanUrl}/keys/${newKey}.json`, {
+                const response = await fetch(`${cleanUrl}/keys/${newKey}.json`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -277,9 +269,14 @@
                         hwid: null 
                     })
                 });
-                console.log("บันทึกคีย์ลง Firebase สำเร็จ!");
+
+                if (!response.ok) {
+                    console.error("Firebase save failed:", await response.text());
+                } else {
+                    console.log("บันทึกคีย์ลง Firebase สำเร็จ!");
+                }
             } catch (err) {
-                console.error("เกิดข้อผิดพลาดในการบันทึกคีย์:", err);
+                console.error("เกิดข้อผิดพลาดในการเชื่อมต่อ Firebase:", err);
             }
         }
 
@@ -299,3 +296,4 @@
     </script>
 </body>
 </html>
+
