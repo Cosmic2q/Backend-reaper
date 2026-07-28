@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>REAPER Hub - X10</title>
+    <title>REAPER Hub - X11</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -174,9 +174,21 @@
         <p>© 2026 REAPER Key System. REAPER HUB BETTER.</p>
     </footer>
 
+    <!-- Firebase SDK Compat v11 -->
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-database-compat.js"></script>
+
     <!-- JavaScript Logic -->
     <script>
-        const FIREBASE_DB_URL = "https://keysystem-reaper-default-rtdb.asia-southeast1.firebasedatabase.app";
+        const firebaseConfig = {
+            databaseURL: "https://keysystem-reaper-default-rtdb.asia-southeast1.firebasedatabase.app"
+        };
+
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.database();
+
         const COOLDOWN_HOURS = 6; 
 
         function handleImageError() {
@@ -195,37 +207,37 @@
         }
 
         window.addEventListener('DOMContentLoaded', () => {
-            verifyAndGenerateKey();
+            initUrlTokenCheck();
         });
 
-        async function verifyAndGenerateKey() {
-            const taskPassed = localStorage.getItem('reaper_task_passed');
+        async function initUrlTokenCheck() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const rPass = urlParams.get('r_pass');
+            
             const lastGetKeyTime = localStorage.getItem('reaper_last_key_time');
             const storedKey = localStorage.getItem('reaper_active_key');
             const now = Date.now();
             const cooldownTime = COOLDOWN_HOURS * 60 * 60 * 1000;
 
-            // 1. ถ้าคีย์เดิมยังไม่หมดอายุ 6 ชม. -> ดึงคีย์เดิมมาโชว์ทันที
+            // 1. ถ้ายังมีคีย์เดิมและอยู่ในช่วง 6 ชั่วโมง -> แสดงคีย์เดิมทันที
             if (lastGetKeyTime && storedKey && (now - parseInt(lastGetKeyTime) < cooldownTime)) {
                 showKeyUI(storedKey);
                 return;
             }
 
-            // 2. ตรวจสอบสิทธิ์ว่ามาจากหน้าภารกิจจริงไหม
-            if (taskPassed === 'true') {
-                localStorage.removeItem('reaper_task_passed');
-
+            // 2. ตรวจสอบรหัสลับ r_pass ที่ติดมากับ URL จาก Linkvertise
+            if (rPass && rPass.startsWith('REAPER_VERIFIED_')) {
                 const newKey = generateReaperKey('REAPER');
                 
                 localStorage.setItem('reaper_last_key_time', now.toString());
                 localStorage.setItem('reaper_active_key', newKey);
 
-                // **ยิงตรงผ่าน REST API (Fetch)** ทะลุทุกข้อจำกัดของ SDK
-                await saveKeyViaREST(newKey);
+                // บันทึกเข้า Firebase Database ทันทีแบบชัวร์ 100%
+                await saveKeyToFirebase(newKey);
 
                 showKeyUI(newKey);
             } else {
-                // ถ้าแอบเข้าลิงก์ตรงๆ ดีดกลับหน้าแรก
+                // ถ้าไม่มีรหัสลับใน URL (แอบเข้าลิงก์ตรงๆ) ดีดกลับหน้าแรกทันที
                 goToHome();
             }
         }
@@ -249,34 +261,18 @@
             return `${prefix.toUpperCase()}-${getRandomSegment(3)}-${getRandomSegment(3)}-${getRandomSegment(3)}`;
         }
 
-        // ใช้ Fetch ยิงตรงเข้า REST API ของ Firebase ชัวร์ 100% ไม่ติด Auth SDK
-        async function saveKeyViaREST(newKey) {
+        async function saveKeyToFirebase(newKey) {
             if (!newKey) return;
-            const cleanUrl = FIREBASE_DB_URL.replace(/\/$/, "");
-            const targetUrl = `${cleanUrl}/keys/${newKey}.json`;
-
             try {
-                const response = await fetch(targetUrl, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        key: newKey,
-                        createdAt: Date.now(),
-                        expiresAt: Date.now() + (24 * 60 * 60 * 1000),
-                        hwid: null
-                    })
+                await db.ref('keys/' + newKey).set({
+                    key: newKey,
+                    createdAt: Date.now(),
+                    expiresAt: Date.now() + (24 * 60 * 60 * 1000),
+                    hwid: null
                 });
-
-                if (response.ok) {
-                    console.log("บันทึกคีย์ผ่าน REST API สำเร็จ:", newKey);
-                } else {
-                    const errData = await response.text();
-                    console.error("Firebase REST Error:", errData);
-                }
+                console.log("บันทึกคีย์ผ่าน URL Token สำเร็จ:", newKey);
             } catch (err) {
-                console.error("Fetch Network Error:", err);
+                console.error("Firebase Error:", err);
             }
         }
 
@@ -296,4 +292,3 @@
     </script>
 </body>
 </html>
-
