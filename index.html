@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>REAPER Hub - Key System x</title>
+    <title>REAPER Hub</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -126,8 +126,8 @@
 
                 <!-- Header Block: Logo & Title -->
                 <div class="flex flex-col items-center justify-center text-center pt-1 border-b border-slate-800/80 pb-5 shrink-0">
-                    <a href="#" class="flex flex-col items-center gap-2 group">
-                        <div id="logo-container" class="w-14 h-14 rounded-2xl border border-reaper-red/50 p-1 bg-gradient-to-tr from-reaper-darkred via-reaper-red to-orange500 shadow-lg shadow-reaper-red/40 group-hover:scale-105 transition-transform overflow-hidden flex items-center justify-center">
+                    <a href="index.html" class="flex flex-col items-center gap-2 group">
+                        <div id="logo-container" class="w-14 h-14 rounded-2xl border border-reaper-red/50 p-1 bg-gradient-to-tr from-reaper-darkred via-reaper-red to-orange-500 shadow-lg shadow-reaper-red/40 group-hover:scale-105 transition-transform overflow-hidden flex items-center justify-center">
                             <img id="logo-img" src="https://i.postimg.cc/RCdqBSxf/IMG-0744.jpg" alt="Reaper Logo" class="w-full h-full object-cover rounded-xl" onerror="handleImageError()">
                         </div>
                         <div class="mt-1">
@@ -140,7 +140,7 @@
                 <!-- STEP 3 GENERATING & DISPLAY AREA -->
                 <div class="flex-grow flex flex-col justify-center my-auto py-4">
                     
-                    <!-- 3-Second Loader -->
+                    <!-- 2.5 Seconds Loader -->
                     <div id="generating-loader" class="flex flex-col items-center justify-center py-6 space-y-3">
                         <div class="w-10 h-10 border-3 border-slate-800 border-t-reaper-red rounded-full animate-spin"></div>
                         <div class="text-xs font-semibold text-slate-300 animate-pulse">Generating your REAPER Key...</div>
@@ -155,6 +155,13 @@
                         <button id="copy-btn" onclick="copyGeneratedKey()" class="w-full py-2.5 rounded-xl bg-reaper-red hover:bg-red-600 text-white text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-all shadow-md shadow-reaper-red/20 active:scale-95 cursor-pointer">
                             <i class="fa-solid fa-copy"></i> Copy Key
                         </button>
+                        
+                        <!-- Back to tasks link -->
+                        <div class="pt-2">
+                            <a href="index.html" class="text-[10px] text-slate-500 hover:text-slate-300 transition-colors">
+                                <i class="fa-solid fa-arrow-left mr-1"></i> Back to Tasks Home
+                            </a>
+                        </div>
                     </div>
 
                 </div>
@@ -179,42 +186,41 @@
         }
 
         window.addEventListener('DOMContentLoaded', () => {
-            verifyAndGenerateKey();
+            processKeyDisplay();
         });
 
-        function verifyAndGenerateKey() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const tokenFromUrl = urlParams.get('token');
+        async function processKeyDisplay() {
             const lastGetKeyTime = localStorage.getItem('reaper_last_key_time');
+            const storedKey = localStorage.getItem('reaper_active_key');
             const now = Date.now();
             const cooldownTime = COOLDOWN_HOURS * 60 * 60 * 1000;
 
-            // 1. ถ้าไม่มี Token หรือแอบก๊อปปี้ลิงก์ key.html มาแปะเปิดตรงๆ -> เด้งกลับ index.html ทันที
-            if (!tokenFromUrl || !tokenFromUrl.startsWith('REAPER_PASS_')) {
-                window.location.href = "index.html";
+            // 1. ถ้ายังมีคีย์เดิมที่ยังไม่หมดอายุคูลดาวน์ 6 ชั่วโมง ให้โชว์คีย์เดิมทันที ไม่ต้องสุ่มใหม่
+            if (lastGetKeyTime && storedKey && (now - parseInt(lastGetKeyTime) < cooldownTime)) {
+                showKeyUI(storedKey);
                 return;
             }
 
-            // 2. ถ้าติดคูลดาวน์อยู่แล้วแอบเปิดใหม่ -> เด้งกลับ index.html ทันที
-            if (lastGetKeyTime && (now - parseInt(lastGetKeyTime) < cooldownTime)) {
-                window.location.href = "index.html";
-                return;
-            }
-
-            // ตั้งค่าเวลาติดคูลดาวน์ 6 ชั่วโมง
+            // 2. ถ้าเป็นคนทำเควสเสร็จข้ามมาใหม่ ให้สร้างคีย์ใหม่ + บันทึกลง Firebase + ตั้งเวลาคูลดาวน์
+            const newKey = generateReaperKey('REAPER');
+            
+            // บันทึกลงเครื่องเพื่อใช้ล็อกคูลดาวน์
             localStorage.setItem('reaper_last_key_time', now.toString());
+            localStorage.setItem('reaper_active_key', newKey);
 
-            setTimeout(async () => {
-                const newKey = generateReaperKey('REAPER');
-                await saveKeyToFirebase(newKey);
+            // บันทึกลง Firebase Database
+            await saveKeyToFirebase(newKey);
 
-                document.getElementById('generating-loader').classList.add('hidden');
-                document.getElementById('key-display-box').classList.remove('hidden');
-                document.getElementById('generated-key').innerText = newKey;
-                
-                // ล้าง Token จาก URL ทิ้งเพื่อป้องกันการเอา URL นี้ไปแชร์ต่อ
-                window.history.replaceState({}, document.title, window.location.pathname);
-            }, 3000);
+            // รออนิเมชันหมุน 2.5 วินาทีแล้วแสดงคีย์
+            setTimeout(() => {
+                showKeyUI(newKey);
+            }, 2500);
+        }
+
+        function showKeyUI(keyToDisplay) {
+            document.getElementById('generating-loader').classList.add('hidden');
+            document.getElementById('key-display-box').classList.remove('hidden');
+            document.getElementById('generated-key').innerText = keyToDisplay;
         }
 
         function generateReaperKey(prefix = 'REAPER') {
@@ -267,4 +273,3 @@
     </script>
 </body>
 </html>
-
