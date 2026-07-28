@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>REAPER Hub - X3</title>
+    <title>REAPER Hub - X4</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -195,41 +195,41 @@
         }
 
         window.addEventListener('DOMContentLoaded', () => {
-            verifyAndGenerateKey();
+            initPageLogic();
         });
 
-        async function verifyAndGenerateKey() {
+        async function initPageLogic() {
             const permissionToken = localStorage.getItem('reaper_permission_granted');
             const lastGetKeyTime = localStorage.getItem('reaper_last_key_time');
             const storedKey = localStorage.getItem('reaper_active_key');
             const now = Date.now();
             const cooldownTime = COOLDOWN_HOURS * 60 * 60 * 1000;
 
-            // 1. ถ้าคีย์เก่ายังไม่หมดอายุ 6 ชม. และมีคีย์อยู่แล้ว ให้แสดงคีย์เดิม (ห้ามสุ่มใหม่)
+            // 1. ถ้ามีคีย์เดิมที่ยังอยู่ในช่วงคูลดาวน์ 6 ชม. ให้แสดงคีย์เดิมทันที
             if (lastGetKeyTime && storedKey && (now - parseInt(lastGetKeyTime) < cooldownTime)) {
                 showKeyUI(storedKey);
                 return;
             }
 
-            // 2. ตรวจสอบสิทธิ์: ต้องมาจากหน้าแรกที่กดผ่านปุ่ม Unlock Key เท่านั้น (มี permissionToken)
+            // 2. ตรวจสอบสิทธิ์ว่ามาจากหน้าแรกจริงไหม
             if (permissionToken === 'true') {
-                // ทำาลายสิทธิ์ทันทีเพื่อป้องกันการกดรีเฟรชหรือเอาลิงก์ไปเปิดซ้ำ (One-time use)
+                // ลบสิทธิ์ทันทีเพื่อป้องกันการรีเฟรชซ้ำ
                 localStorage.removeItem('reaper_permission_granted');
 
+                // สร้างคีย์ใหม่
                 const newKey = generateReaperKey('REAPER');
                 
-                // บันทึกเวลาคูลดาวน์และคีย์ปัจจุบันลงเครื่อง
+                // บันทึกเวลาคูลดาวน์และคีย์ลงเครื่อง
                 localStorage.setItem('reaper_last_key_time', now.toString());
                 localStorage.setItem('reaper_active_key', newKey);
 
-                // บันทึกข้อมูลเข้า Firebase Database ทันที 100%
-                await saveKeyDirectToFirebase(newKey);
+                // บันทึกเข้า Firebase ทันทีแบบบังคับรอให้เสร็จก่อน
+                await saveKeyToFirebaseDirect(newKey);
 
-                setTimeout(() => {
-                    showKeyUI(newKey);
-                }, 2000);
+                // แสดงผลคีย์หน้าจอ
+                showKeyUI(newKey);
             } else {
-                // ถ้าแอบก๊อปปี้ลิงก์มาเปิดตรงๆ โดยไม่ได้กดผ่านภารกิจ จะไม่มีสิทธิ์และดีดกลับหน้าแรกทันที
+                // ถ้าแอบเข้าลิงก์ตรงๆ ไม่มีสิทธิ์ ดีดกลับหน้าแรก
                 goToHome();
             }
         }
@@ -253,7 +253,8 @@
             return `${prefix.toUpperCase()}-${getRandomSegment(3)}-${getRandomSegment(3)}-${getRandomSegment(3)}`;
         }
 
-        async function saveKeyDirectToFirebase(newKey) {
+        // ฟังก์ชันส่งข้อมูลเข้า Firebase แบบตรงไปตรงมา
+        async function saveKeyToFirebaseDirect(newKey) {
             if (!newKey) return;
             const cleanUrl = FIREBASE_DB_URL.replace(/\/$/, "");
             const targetUrl = `${cleanUrl}/keys/${newKey}.json`;
@@ -273,13 +274,13 @@
                 });
 
                 if (response.ok) {
-                    console.log("บันทึกคีย์ลง Firebase สำเร็จเรียบร้อย:", newKey);
+                    console.log("บันทึกคีย์ลง Firebase สำเร็จ:", newKey);
                 } else {
-                    const errText = await response.text();
-                    console.error("Firebase ปฏิเสธการบันทึก:", errText);
+                    const errorText = await response.text();
+                    console.error("Firebase ปฏิเสธ:", errorText);
                 }
             } catch (err) {
-                console.error("เกิดข้อผิดพลาดในการเชื่อมต่อ:", err);
+                console.error("Fetch Error:", err);
             }
         }
 
