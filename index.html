@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>REAPER Hub - Success</title>
+    <title>REAPER Hub - Final Key</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -126,7 +126,7 @@
 
                 <!-- Header Block: Logo & Title -->
                 <div class="flex flex-col items-center justify-center text-center pt-1 border-b border-slate-800/80 pb-5 shrink-0">
-                    <a href="index.html" class="flex flex-col items-center gap-2 group">
+                    <a href="index.html" onclick="goToHome(event)" class="flex flex-col items-center gap-2 group cursor-pointer">
                         <div id="logo-container" class="w-14 h-14 rounded-2xl border border-reaper-red/50 p-1 bg-gradient-to-tr from-reaper-darkred via-reaper-red to-orange-500 shadow-lg shadow-reaper-red/40 group-hover:scale-105 transition-transform overflow-hidden flex items-center justify-center">
                             <img id="logo-img" src="https://i.postimg.cc/RCdqBSxf/IMG-0744.jpg" alt="Reaper Logo" class="w-full h-full object-cover rounded-xl" onerror="handleImageError()">
                         </div>
@@ -157,8 +157,8 @@
                         </button>
                         
                         <div class="pt-2">
-                            <a href="index.html" class="text-[10px] text-slate-500 hover:text-slate-300 transition-colors">
-                                <i class="fa-solid fa-arrow-left mr-1"></i> Back to Tasks Home
+                            <a href="index.html" onclick="goToHome(event)" class="text-[10px] text-slate-500 hover:text-slate-300 transition-colors inline-flex items-center gap-1 cursor-pointer">
+                                <i class="fa-solid fa-arrow-left"></i> Back to Tasks Home
                             </a>
                         </div>
                     </div>
@@ -184,9 +184,36 @@
             logoContainer.innerHTML = '<i class="fa-solid fa-skull text-white text-2xl"></i>';
         }
 
+        // ฟังก์ชันย้ายหน้ากลับ index.html ป้องกันปัญหา Clean URLs
+        function goToHome(e) {
+            if (e) e.preventDefault();
+            const currentUrl = window.location.href;
+            if (currentUrl.includes('key')) {
+                window.location.href = currentUrl.replace(/key(\.html)?/i, 'index.html');
+            } else {
+                window.location.href = "index.html";
+            }
+        }
+
         window.addEventListener('DOMContentLoaded', () => {
             verifyAndGenerateKey();
         });
+
+        async function processNewKeyGeneration() {
+            const newKey = generateReaperKey('REAPER');
+            const now = Date.now();
+            
+            // บันทึกเวลาลงเครื่องให้ติดคูลดาวน์ 6 ชม. ทันที
+            localStorage.setItem('reaper_last_key_time', now.toString());
+            localStorage.setItem('reaper_active_key', newKey);
+
+            // เซฟคีย์ลง Firebase Database
+            await saveKeyToFirebase(newKey);
+
+            setTimeout(() => {
+                showKeyUI(newKey);
+            }, 2500);
+        }
 
         async function verifyAndGenerateKey() {
             const questDoneToken = sessionStorage.getItem('reaper_quest_done');
@@ -207,24 +234,12 @@
             const hasValidSession = questDoneToken === 'true';
 
             if (isFromLinkvertise || hasValidSession) {
-                // ล้างตั๋วชั่วคราวทิ้งทันที เพื่อไม่ให้ใช้ซ้ำ
+                // ล้างตั๋วชั่วคราวทิ้ง
                 sessionStorage.removeItem('reaper_quest_done');
-
-                const newKey = generateReaperKey('REAPER');
-                
-                // บันทึกลงเครื่องล็อกคูลดาวน์
-                localStorage.setItem('reaper_last_key_time', now.toString());
-                localStorage.setItem('reaper_active_key', newKey);
-
-                // เซฟคีย์ลง Firebase Database
-                await saveKeyToFirebase(newKey);
-
-                setTimeout(() => {
-                    showKeyUI(newKey);
-                }, 2500);
+                await processNewKeyGeneration();
             } else {
-                // 3. ถ้าก๊อปปี้ URL มาวางตรงๆ ในเบราว์เซอร์อื่น ให้ดีดกลับไปหน้าแรก index.html ทันที!
-                window.location.href = "index.html";
+                // 3. ถ้าแอบเข้าตรงๆ ให้พาไป index.html โดยตรง
+                goToHome();
             }
         }
 
