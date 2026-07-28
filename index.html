@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>REAPER HUB - X1</title>
+    <title>REAPER Hub - X2</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -180,13 +180,13 @@
 
     <!-- JavaScript Logic -->
     <script>
-        // การตั้งค่า Firebase ของคุณ
         const firebaseConfig = {
             databaseURL: "https://keysystem-reaper-default-rtdb.asia-southeast1.firebasedatabase.app"
         };
 
-        // เริ่มต้นใช้งาน Firebase
-        firebase.initializeApp(firebaseConfig);
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
         const db = firebase.database();
 
         const COOLDOWN_HOURS = 6; 
@@ -211,38 +211,36 @@
         });
 
         async function verifyAndGenerateKey() {
-            const questDoneToken = sessionStorage.getItem('reaper_quest_done');
+            const oneTimeToken = sessionStorage.getItem('reaper_one_time_token');
             const lastGetKeyTime = localStorage.getItem('reaper_last_key_time');
             const storedKey = localStorage.getItem('reaper_active_key');
-            const referrer = document.referrer.toLowerCase();
             const now = Date.now();
             const cooldownTime = COOLDOWN_HOURS * 60 * 60 * 1000;
 
-            // 1. ถ้ายังมีคีย์เดิมที่ยังไม่หมดอายุ 6 ชม. ให้โชว์คีย์เดิม
+            // 1. ถ้าคีย์เก่ายังไม่หมดอายุ 6 ชม. โชว์คีย์เดิม
             if (lastGetKeyTime && storedKey && (now - parseInt(lastGetKeyTime) < cooldownTime)) {
                 showKeyUI(storedKey);
                 return;
             }
 
-            // 2. ตรวจสอบสิทธิ์
-            const isFromLinkvertise = referrer.includes('linkvertise') || referrer.includes('link-target');
-            const hasValidSession = questDoneToken === 'true';
-
-            if (isFromLinkvertise || hasValidSession) {
-                sessionStorage.removeItem('reaper_quest_done');
+            // 2. ตรวจสอบ One-time Token (ต้องมีและถูกต้องเท่านั้น)
+            if (oneTimeToken) {
+                // ทำลาย Token ทันทีหลังใช้งาน (One-time use) ป้องกันการรีเฟรชหรือกดซ้ำ
+                sessionStorage.removeItem('reaper_one_time_token');
 
                 const newKey = generateReaperKey('REAPER');
                 
                 localStorage.setItem('reaper_last_key_time', now.toString());
                 localStorage.setItem('reaper_active_key', newKey);
 
-                // บันทึกข้อมูลลง Firebase Realtime Database ผ่าน SDK
+                // ส่งข้อมูลเข้า Firebase Database ชัวร์ 100%
                 await saveKeyToFirebase(newKey);
 
                 setTimeout(() => {
                     showKeyUI(newKey);
-                }, 2500);
+                }, 2000);
             } else {
+                // ถ้าไม่มี Token ชั่วคราว (แอบพิมพ์ลิงก์มาเปิดเอง) ดีดกลับหน้าแรกทันที
                 goToHome();
             }
         }
@@ -267,19 +265,17 @@
         }
 
         async function saveKeyToFirebase(newKey) {
-            const expiresAt = Date.now() + (24 * 60 * 60 * 1000); 
-
+            if (!newKey) return;
             try {
-                // ใช้ Firebase SDK เขียนข้อมูลลงไปตรงๆ
                 await db.ref('keys/' + newKey).set({
                     key: newKey,
-                    createdAt: firebase.database.ServerValue.TIMESTAMP,
-                    expiresAt: expiresAt,
+                    createdAt: Date.now(),
+                    expiresAt: Date.now() + (24 * 60 * 60 * 1000),
                     hwid: null
                 });
-                console.log("บันทึกคีย์ลง Firebase สำเร็จ!");
+                console.log("บันทึกคีย์ลง Firebase สำเร็จ:", newKey);
             } catch (err) {
-                console.error("เกิดข้อผิดพลาดในการบันทึก Firebase:", err);
+                console.error("Firebase Error:", err);
             }
         }
 
