@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>REAPER Hub - X8</title>
+    <title>REAPER Hub - X9</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -207,37 +207,41 @@
         }
 
         window.addEventListener('DOMContentLoaded', () => {
-            initVerificationAndSave();
+            verifyAndGenerateKey();
         });
 
-        async function initVerificationAndSave() {
+        async function verifyAndGenerateKey() {
             const taskPassed = localStorage.getItem('reaper_task_passed');
             const lastGetKeyTime = localStorage.getItem('reaper_last_key_time');
             const storedKey = localStorage.getItem('reaper_active_key');
             const now = Date.now();
             const cooldownTime = COOLDOWN_HOURS * 60 * 60 * 1000;
 
-            // 1. ถ้ายังมีคีย์เดิมและอยู่ในช่วง 6 ชั่วโมง -> แสดงคีย์เดิมทันที (ป้องกันการปั๊มคีย์)
+            // 1. ถ้าคีย์เก่ายังไม่หมดอายุ 6 ชม. -> ดึงคีย์เดิมมาโชว์ทันที
             if (lastGetKeyTime && storedKey && (now - parseInt(lastGetKeyTime) < cooldownTime)) {
                 showKeyUI(storedKey);
                 return;
             }
 
-            // 2. ตรวจสอบสิทธิ์การผ่านภารกิจ
+            // 2. ตรวจสอบความถูกต้อง: ต้องกดผ่านหน้าภารกิจมาจริงๆ เท่านั้น (มีธง reaper_task_passed)
             if (taskPassed === 'true') {
+                // ลบธงทิ้งทันทีเพื่อใช้ครั้งเดียว (One-time use) ป้องกันการรีเฟรชหน้าซ้ำ
                 localStorage.removeItem('reaper_task_passed');
 
+                // สร้างคีย์ใหม่
                 const newKey = generateReaperKey('REAPER');
                 
+                // บันทึกเวลาคูลดาวน์และคีย์ปัจจุบัน
                 localStorage.setItem('reaper_last_key_time', now.toString());
                 localStorage.setItem('reaper_active_key', newKey);
 
-                // บันทึกเข้า Firebase Database ผ่าน SDK ชัวร์ 100%
+                // **แก้จุดพัง:** สั่งบันทึกข้อมูลลง Firebase Database ให้เรียบร้อย 100% ก่อนค่อยโชว์หน้าจอ
                 await saveKeyToFirebase(newKey);
 
+                // แสดงผลหน้าจอคีย์สำเร็จ
                 showKeyUI(newKey);
             } else {
-                // ถ้าแอบเข้าลิงก์ตรงๆ ไม่มีสิทธิ์ ดีดกลับหน้าแรกทันที
+                // ถ้าแอบพิมพ์ลิงก์มาเปิดตรงๆ หรือเข้าหน้า key.html ดะโดยไม่ทำภารกิจ -> ดีดกลับหน้าแรกทันที
                 goToHome();
             }
         }
@@ -270,7 +274,7 @@
                     expiresAt: Date.now() + (24 * 60 * 60 * 1000),
                     hwid: null
                 });
-                console.log("บันทึกคีย์สำเร็จ:", newKey);
+                console.log("บันทึกคีย์เข้า Firebase สำเร็จและปลอดภัย:", newKey);
             } catch (err) {
                 console.error("Firebase Error:", err);
             }
