@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>REAPER Hub - X7</title>
+    <title>REAPER Hub - X8</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -207,10 +207,10 @@
         }
 
         window.addEventListener('DOMContentLoaded', () => {
-            initReliableKeySystem();
+            initVerificationAndSave();
         });
 
-        async function initReliableKeySystem() {
+        async function initVerificationAndSave() {
             const taskPassed = localStorage.getItem('reaper_task_passed');
             const lastGetKeyTime = localStorage.getItem('reaper_last_key_time');
             const storedKey = localStorage.getItem('reaper_active_key');
@@ -223,25 +223,21 @@
                 return;
             }
 
-            // 2. ตรวจสอบว่าผู้ใช้ผ่านมาตรการทำภารกิจจริงหรือไม่ (มีธง reaper_task_passed)
-            if (taskPassed) {
-                // ทำลายธงทิ้งทันที เพื่อใช้ครั้งเดียว (One-time use) ป้องกันการรีเฟรชซ้ำ
+            // 2. ตรวจสอบสิทธิ์การผ่านภารกิจ
+            if (taskPassed === 'true') {
                 localStorage.removeItem('reaper_task_passed');
 
-                // สร้างคีย์ใหม่
                 const newKey = generateReaperKey('REAPER');
                 
-                // ล็อกคูลดาวน์ใหม่ทันที 6 ชั่วโมง
                 localStorage.setItem('reaper_last_key_time', now.toString());
                 localStorage.setItem('reaper_active_key', newKey);
 
-                // บันทึกเข้า Firebase Database ผ่าน SDK ทันทีอย่างแม่นยำ
-                await saveKeyUsingSDK(newKey);
+                // บันทึกเข้า Firebase Database ผ่าน SDK ชัวร์ 100%
+                await saveKeyToFirebase(newKey);
 
-                // แสดงผลหน้าจอคีย์
                 showKeyUI(newKey);
             } else {
-                // ถ้าแอบพิมพ์ลิงก์มาเปิดตรงๆ โดยไม่ได้ทำภารกิจ จะไม่มีธงนี้ ดีดกลับหน้าแรกทันที
+                // ถ้าแอบเข้าลิงก์ตรงๆ ไม่มีสิทธิ์ ดีดกลับหน้าแรกทันที
                 goToHome();
             }
         }
@@ -265,7 +261,7 @@
             return `${prefix.toUpperCase()}-${getRandomSegment(3)}-${getRandomSegment(3)}-${getRandomSegment(3)}`;
         }
 
-        async function saveKeyUsingSDK(newKey) {
+        async function saveKeyToFirebase(newKey) {
             if (!newKey) return;
             try {
                 await db.ref('keys/' + newKey).set({
@@ -274,9 +270,9 @@
                     expiresAt: Date.now() + (24 * 60 * 60 * 1000),
                     hwid: null
                 });
-                console.log("บันทึกคีย์ลง Firebase สำเร็จเรียบร้อย:", newKey);
+                console.log("บันทึกคีย์สำเร็จ:", newKey);
             } catch (err) {
-                console.error("Firebase SDK Error:", err);
+                console.error("Firebase Error:", err);
             }
         }
 
@@ -296,3 +292,4 @@
     </script>
 </body>
 </html>
+
