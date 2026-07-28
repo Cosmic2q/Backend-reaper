@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>REAPER Hub - Box</title>
+    <title>REAPER HUB - X1</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -174,9 +174,21 @@
         <p>© 2026 REAPER Key System. REAPER HUB BETTER.</p>
     </footer>
 
+    <!-- Firebase SDK (Compat v11) -->
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-database-compat.js"></script>
+
     <!-- JavaScript Logic -->
     <script>
-        const FIREBASE_DB_URL = "https://keysystem-reaper-default-rtdb.asia-southeast1.firebasedatabase.app"; 
+        // การตั้งค่า Firebase ของคุณ
+        const firebaseConfig = {
+            databaseURL: "https://keysystem-reaper-default-rtdb.asia-southeast1.firebasedatabase.app"
+        };
+
+        // เริ่มต้นใช้งาน Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
         const COOLDOWN_HOURS = 6; 
 
         function handleImageError() {
@@ -224,7 +236,7 @@
                 localStorage.setItem('reaper_last_key_time', now.toString());
                 localStorage.setItem('reaper_active_key', newKey);
 
-                // ส่งข้อมูลเข้า Firebase Database อย่างถูกต้อง
+                // บันทึกข้อมูลลง Firebase Realtime Database ผ่าน SDK
                 await saveKeyToFirebase(newKey);
 
                 setTimeout(() => {
@@ -256,27 +268,18 @@
 
         async function saveKeyToFirebase(newKey) {
             const expiresAt = Date.now() + (24 * 60 * 60 * 1000); 
-            const cleanUrl = FIREBASE_DB_URL.replace(/\/$/, "");
 
             try {
-                const response = await fetch(`${cleanUrl}/keys/${newKey}.json`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        key: newKey,
-                        createdAt: Date.now(),
-                        expiresAt: expiresAt,
-                        hwid: null 
-                    })
+                // ใช้ Firebase SDK เขียนข้อมูลลงไปตรงๆ
+                await db.ref('keys/' + newKey).set({
+                    key: newKey,
+                    createdAt: firebase.database.ServerValue.TIMESTAMP,
+                    expiresAt: expiresAt,
+                    hwid: null
                 });
-
-                if (!response.ok) {
-                    console.error("Firebase save failed:", await response.text());
-                } else {
-                    console.log("บันทึกคีย์ลง Firebase สำเร็จ!");
-                }
+                console.log("บันทึกคีย์ลง Firebase สำเร็จ!");
             } catch (err) {
-                console.error("เกิดข้อผิดพลาดในการเชื่อมต่อ Firebase:", err);
+                console.error("เกิดข้อผิดพลาดในการบันทึก Firebase:", err);
             }
         }
 
@@ -296,3 +299,4 @@
     </script>
 </body>
 </html>
+
