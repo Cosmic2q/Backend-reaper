@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>REAPER Hub - X11</title>
+    <title>REAPER Hub - X12</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -207,37 +207,37 @@
         }
 
         window.addEventListener('DOMContentLoaded', () => {
-            initUrlTokenCheck();
+            initStableSystem();
         });
 
-        async function initUrlTokenCheck() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const rPass = urlParams.get('r_pass');
-            
+        async function initStableSystem() {
+            const clickedFlag = sessionStorage.getItem('reaper_clicked_linkvertise');
             const lastGetKeyTime = localStorage.getItem('reaper_last_key_time');
             const storedKey = localStorage.getItem('reaper_active_key');
             const now = Date.now();
             const cooldownTime = COOLDOWN_HOURS * 60 * 60 * 1000;
 
-            // 1. ถ้ายังมีคีย์เดิมและอยู่ในช่วง 6 ชั่วโมง -> แสดงคีย์เดิมทันที
+            // 1. ถ้าคีย์เดิมยังอยู่ในช่วงคูลดาวน์ 6 ชม. -> ดึงคีย์เดิมมาโชว์ทันที
             if (lastGetKeyTime && storedKey && (now - parseInt(lastGetKeyTime) < cooldownTime)) {
                 showKeyUI(storedKey);
                 return;
             }
 
-            // 2. ตรวจสอบรหัสลับ r_pass ที่ติดมากับ URL จาก Linkvertise
-            if (rPass && rPass.startsWith('REAPER_VERIFIED_')) {
+            // 2. ถ้าเพิ่งกดมาจาก Linkvertise (เช็กจาก sessionStorage ที่ไม่รีเฟรชเองมั่วซั่ว)
+            if (clickedFlag === 'true') {
+                sessionStorage.removeItem('reaper_clicked_linkvertise');
+
                 const newKey = generateReaperKey('REAPER');
                 
                 localStorage.setItem('reaper_last_key_time', now.toString());
                 localStorage.setItem('reaper_active_key', newKey);
 
-                // บันทึกเข้า Firebase Database ทันทีแบบชัวร์ 100%
+                // **บังคับส่งข้อมูลเข้า Firebase ทันทีแบบ 100% ชัวร์ๆ**
                 await saveKeyToFirebase(newKey);
 
                 showKeyUI(newKey);
             } else {
-                // ถ้าไม่มีรหัสลับใน URL (แอบเข้าลิงก์ตรงๆ) ดีดกลับหน้าแรกทันที
+                // ถ้าเข้ามาตรงๆ โดยไม่ได้กดผ่านปุ่ม -> ดีดกลับหน้าแรก
                 goToHome();
             }
         }
@@ -270,7 +270,7 @@
                     expiresAt: Date.now() + (24 * 60 * 60 * 1000),
                     hwid: null
                 });
-                console.log("บันทึกคีย์ผ่าน URL Token สำเร็จ:", newKey);
+                console.log("บันทึกคีย์สำเร็จ 100%:", newKey);
             } catch (err) {
                 console.error("Firebase Error:", err);
             }
@@ -292,3 +292,4 @@
     </script>
 </body>
 </html>
+
